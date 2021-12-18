@@ -1,0 +1,24 @@
+
+.moves-container {
+    width: 40%;
+    float: right;
+}
+
+.board {
+    float: left;
+}
+
+
+.parent {
+    display: flex;
+    width: 50%;
+}
+
+.child {
+    flex: 1;
+    margin: 10px;
+  }
+  
+.child:first-child {
+    margin-right: 20px;
+}
