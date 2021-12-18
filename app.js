@@ -20,6 +20,55 @@ app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
 app.use(express.static('public'));
 
+/* web socket functionality */
+var http = require('http').Server(app);
+var io = require('socket.io')(http);
+
+var colors_available = ['white', 'black'];
+io.on('connection', (socket) => {
+  console.log('a user connected');
+  socket.emit('set-available-colors', {available: colors_available});
+
+  socket.on("choose-color", (color, callback) => {
+    console.log("user chose color " + color);
+    console.log(colors_available);
+    if(colors_available.includes(color)) {
+      idx = colors_available.indexOf(color);
+      colors_available.splice(idx, 1);
+      callback("success");
+    } else {
+      callback(null);
+    }
+  });
+
+  //when a move is received, send it to the other player
+  socket.on('move', (move) => {
+    socket.broadcast.emit('move', move);
+  })
+
+//send chats to all users in a particular chat when a messages is received server-side
+  socket.on('send-chat-message', (data) => {
+      console.log('server received a message');
+      console.log(data.message);
+      socket.broadcast.emit('chat-message', {
+          message: data.message,
+          user: data.username,
+          chatid: data.chatid,
+      });
+  });
+
+//send chat invitation to a user when its received by the server
+socket.on('invite-user-to-chat', (data) => {
+  socket.broadcast.emit('invite-user', {
+    user_invited: data.user_invited,
+    user_inviting: data.user_inviting,
+    chatid: data.chatid,
+    chat_title: data.chat_title
+  });
+});
+
+});
+
 app.use('/', indexRouter);
 app.use('/users', usersRouter);
 
@@ -40,7 +89,7 @@ app.use(function(err, req, res, next) {
   res.render('error');
 });
 
-app.listen(port, () => {
+http.listen(port, () => {
   console.log('App listening on port '+port);
 })
 

@@ -4,6 +4,55 @@ var $status = $('#status')
 var $fen = $('#fen')
 var $pgn = $('#pgn')
 var move_table = document.getElementById("moves")
+var color = null;
+
+var socket = io();
+
+socket.on('move', (move) => {
+  game.move(move);
+  board.position(game.fen());
+  updateStatus();
+});
+
+/* color selection buttons */
+var white_btn = document.getElementById('white');
+white_btn.addEventListener('click', function(){chooseColor('white')});
+
+var black_btn = document.getElementById('black');
+black_btn.addEventListener('click', function(){chooseColor('black')});
+
+var local_btn = document.getElementById('local');
+local_btn.addEventListener('click', () => {
+  local_btn.disabled = true;
+  color = 'local';
+  document.getElementById('your-color').innerHTML = "Local Play Activated";
+});
+
+async function chooseColor(color) {
+  if(this.color) {
+    return;
+  }
+  console.log("choose color function is activated with color " + color);
+  socket.emit("choose-color", color, (response) => {
+    if(response) {
+      console.log("successfully selected color" + color);
+      this.color = color.substring(0,1);
+      document.getElementById('your-color').innerHTML = color;
+      white_btn.disabled = true;
+      black_btn.disabled = true;
+    }
+  });
+};
+
+socket.on("set-available-colors", (data) => {
+  if(data.available.includes('white')) {
+    white_btn.disabled = false;
+  }
+  if(data.available.includes('black')) {
+    black_btn.disabled = false;
+  }
+  
+})
 
 var title = document.getElementById("title")
 var variations = new Map([["standard", "Standard Game"],
@@ -26,6 +75,9 @@ function onDragStart (source, piece, position, orientation) {
   // do not pick up pieces if the game is over
   if (game.game_over()) return false
 
+  //dont let someone pickup colors for the other side
+  if( (color != 'local') && (color != game.turn()) ) return false
+
   // only pick up pieces for the side to move
   if ((game.turn() === 'w' && piece.search(/^b/) !== -1) ||
       (game.turn() === 'b' && piece.search(/^w/) !== -1)) {
@@ -44,6 +96,13 @@ function onDrop (source, target) {
   // illegal move
   if (move === null) return 'snapback'
 
+  console.log(move);
+  /* send the move to the other player */
+  socket.emit('move', {
+    from: move.from,
+    to: move.to,
+    promotion: move.promotion
+  });
   updateStatus()
 }
 
@@ -93,7 +152,6 @@ function updatetable() {
     mbody.removeChild(mbody.firstChild);
   }
   let pgn = game.pgn().split(" ");
-  console.log(pgn);
   //every trio of items in the pgn array denotes a move. We want to add it to the table
   let i = 0;
   while(i <= pgn.length - 2) {
