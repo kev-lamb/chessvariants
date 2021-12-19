@@ -12,9 +12,23 @@ router.get('/test', function(req, res) {
 
 router.get('/game/:ruleset', function(req, res) {
   if(req.params.ruleset) {
-    res.render('game.ejs', {ruleset: req.params.ruleset});
+    res.render('game.ejs', {
+      ruleset: req.params.ruleset,
+      color: req.session.color
+    });
+  } else {
+    res.redirect('/');
   }
 
+});
+
+router.post('/choosecolor', function(req, res) {
+  if(req.body.color) {
+    req.session.color = req.body.color;
+    res.send(req.session.color);
+  } else {
+    res.send(null);
+  }
 })
 
 module.exports = router;

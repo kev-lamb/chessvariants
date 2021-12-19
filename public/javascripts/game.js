@@ -4,7 +4,7 @@ var $status = $('#status')
 var $fen = $('#fen')
 var $pgn = $('#pgn')
 var move_table = document.getElementById("moves")
-var color = null;
+var color = session_color.substring(0,1);
 
 var socket = io();
 
@@ -28,6 +28,15 @@ local_btn.addEventListener('click', () => {
   document.getElementById('your-color').innerHTML = "Local Play Activated";
 });
 
+if(color) {
+  white_btn.disabled = true;
+  black_btn.disabled = true;
+  local_btn.disabled = true;
+  document.getElementById('your-color').innerHTML = color == 'w' ? 'white' : 'black';
+}
+
+
+
 async function chooseColor(color) {
   if(this.color) {
     return;
@@ -40,16 +49,28 @@ async function chooseColor(color) {
       document.getElementById('your-color').innerHTML = color;
       white_btn.disabled = true;
       black_btn.disabled = true;
+      local_btn.disabled = true;
+      $.post('/choosecolor', {color: color}, (data) => {
+        let text = null;
+        if(data) {
+          text = data;
+        } else {
+          text = "error when assigning color"
+        }
+        document.getElementById('your-color').innerHTML = text;
+      });
     }
   });
 };
 
 socket.on("set-available-colors", (data) => {
-  if(data.available.includes('white')) {
-    white_btn.disabled = false;
-  }
-  if(data.available.includes('black')) {
-    black_btn.disabled = false;
+  if(!color) {
+    if(data.available.includes('white')) {
+      white_btn.disabled = false;
+    }
+    if(data.available.includes('black')) {
+      black_btn.disabled = false;
+    }
   }
   
 })
